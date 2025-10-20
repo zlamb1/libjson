@@ -3,7 +3,7 @@ project(
     'c',
     meson_version : '>= 1.3.0',
     version : '0.1',
-    default_options : ['warning_level=3', 'c_std=c11', 'werror=true'],
+    default_options : ['warning_level=3', 'c_std=c99', 'werror=true'],
 )
 
 srcs = [
