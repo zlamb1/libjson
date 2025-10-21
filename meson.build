@@ -10,6 +10,7 @@ srcs = [
     'src/json_array.c',
     'src/json_bool.c',
     'src/json_decoder.c',
+    'src/json_error.c',
     'src/json_number.c',
     'src/json_object.c',
     'src/json_string.c',
@@ -37,31 +38,36 @@ tester = executable(
 
 test_dir = meson.project_source_root() + '/tests'
 
-fail_tests = [
-    'top_level_empty',
-    'top_level_bad_int_hyphen',
-    'top_level_bad_int_non_digit',
-    'top_level_bad_frac',
-    'top_level_bad_exp',
-    'top_level_bad_exp_hyphen',
-    'top_level_bad_exp_plus',
+n_tests = [
+    'empty',
+    'bad_int_hyphen',
+    'bad_int_non_digit',
+    'bad_frac',
+    'bad_exp',
+    'bad_exp_hyphen',
+    'bad_exp_plus',
 ]
 
-pass_tests = [
-    ['top_level_num_int',        '1.000000'     ],
-    ['top_level_num_frac',       '1.435610'     ],
-    ['top_level_num_exp',        '14.356100'    ],
-    ['top_level_num_int_exp',    '100000.000000'],
-    ['top_level_num_exp_hyphen', '0.110000'],
-    ['top_level_num_exp_plus', '131.230000'],
+y_tests = [
+    [ 'num_int',        '1.000000'      ],
+    [ 'num_frac',       '1.435610'      ],
+    [ 'num_exp',        '14.356100'     ],
+    [ 'num_int_exp',    '100000.000000' ],
+    [ 'num_exp_hyphen', '0.110000'      ],
+    [ 'num_exp_plus',   '131.230000'    ],
 ]
 
-foreach test : fail_tests
-    test(f'test_fail_@test@', tester, args : [f'@test_dir@/fail/@test@.json'], should_fail : true)
+foreach test : n_tests
+    test(f'n_@test@', tester, args : [f'@test_dir@/n/@test@.json'], should_fail : true)
 endforeach
 
-foreach test : pass_tests
+foreach test : y_tests
     test_name = test[0]
-    stdout = test[1]
-    test(f'test_pass_@test_name@', tester, args : [f'@test_dir@/pass/@test_name@.json', stdout])
+    args = [f'@test_dir@/y/@test_name@.json']
+
+    if test.length() > 1
+        args += test[1]
+    endif
+
+    test(f'y_@test_name@', tester, args : args)
 endforeach

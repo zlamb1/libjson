@@ -3,6 +3,15 @@
 
 #include "json_types.h"
 
+#define BUF_ADVANCE_COL(BUF)                                                  \
+  do                                                                          \
+    {                                                                         \
+      ++(BUF)->col;                                                           \
+      ++(BUF)->data;                                                          \
+      --(BUF)->size;                                                          \
+    }                                                                         \
+  while (0)
+
 typedef struct json_entry
 {
   char *key;
@@ -47,5 +56,19 @@ typedef struct json_decoder
   json_allocator *allocator;
   ju32 tab_size;
 } json_decoder;
+
+typedef struct buffer
+{
+  const char *data;
+  jusize size, row, col;
+} buffer;
+
+static inline int
+is_digit (char ch)
+{
+  return ch >= 0x30 && ch <= 0x39;
+}
+
+json_error json_decode_number (buffer *buf, json_value *value, char ch);
 
 #endif
