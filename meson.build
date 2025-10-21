@@ -46,6 +46,7 @@ n_tests = [
     'bad_exp',
     'bad_exp_hyphen',
     'bad_exp_plus',
+    'ws.json',
 ]
 
 n_ext_tests = [
