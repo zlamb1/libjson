@@ -1,117 +1,16 @@
 #ifndef LIBJSON_H
 #define LIBJSON_H 1
 
-#include <stddef.h>
-#include <stdint.h>
+#include "json_types.h"
 
-#define JSON_FALSE 0
-#define JSON_TRUE  1
+typedef struct json_object json_object;
+typedef struct json_array json_array;
+typedef struct json_string json_string;
 
-typedef uint8_t ju8;
-typedef uint16_t ju16;
-typedef uint32_t ju32;
-typedef uint64_t ju64;
+typedef struct json_value json_value;
 
-typedef int8_t j8;
-typedef int16_t j16;
-typedef int32_t j32;
-typedef int64_t j64;
-
-typedef ju8 jbool;
-typedef size_t jusize;
-
-typedef enum json_error
-{
-  JSON_ERROR_NONE                = 0,
-  JSON_ERROR_ENCODING            = 1,
-  JSON_ERROR_INTERNAL            = 2,
-  JSON_ERROR_NOMEM               = 3,
-  JSON_ERROR_NO_TOP_LEVEL_OBJ    = 4,
-  JSON_ERROR_MANY_TOP_LEVEL_OBJS = 5,
-  JSON_ERROR_UNCLOSED            = 6,
-} json_error;
-
-typedef enum json_value_type
-{
-  JSON_VALUE_TYPE_OBJECT,
-  JSON_VALUE_TYPE_ARRAY,
-  JSON_VALUE_TYPE_NUMBER,
-  JSON_VALUE_TYPE_STRING,
-  JSON_VALUE_TYPE_BOOL,
-  JSON_VALUE_TYPE_NULL,
-} json_value_type;
-
-typedef struct json_decode_error
-{
-  json_error error;
-  jusize row, column;
-} json_decode_error;
-
-typedef struct json_entry
-{
-  char *key;
-  struct json_value *values;
-  struct json_value *next;
-} json_entry;
-
-typedef struct json_object
-{
-  jusize size, cap;
-  json_entry *entries;
-} json_object;
-
-typedef struct json_array
-{
-  jusize size, cap;
-  struct json_value *elements;
-} json_array;
-
-typedef struct json_value
-{
-  ju8 type;
-
-  union
-  {
-    json_object object;
-    json_array array;
-    char *string;
-    j64 number;
-    jbool bool;
-  } value;
-} json_value;
-
-typedef struct json_allocator
-{
-  void *(*json_malloc) (jusize size);
-  void *(*json_realloc) (void *p, jusize new_size);
-  void (*json_free) (void *p);
-} json_allocator;
-
-#define JSON_EXT_LAX    0xFFFFFFFF // allow all extensions
-#define JSON_EXT_STRICT 0x00000000 // disallow all extensions
-
-#define JSON_EXT_SINGLE_LINE_COMMENT (1 << 0)
-#define JSON_EXT_MULTI_LINE_COMMENT  (1 << 1)
-#define JSON_EXT_COMMENT                                                      \
-  (JSON_EXT_SINGLE_LINE_COMMENT | JSON_EXT_MULTI_LINE_COMMENT)
-#define JSON_EXT_NO_TOP_LEVEL_OBJ (1 << 2)
-
-#define JSON_ANY_DEPTH 0xFFFFFFFF
-
-#define DEFAULT_JSON_DECODER                                                  \
-  {                                                                           \
-    .extension_flags = JSON_EXT_LAX,                                          \
-    .max_depth       = JSON_ANY_DEPTH,                                        \
-  }
-
-typedef struct json_decoder
-{
-  ju32 extension_flags;
-  ju32 max_depth;
-  json_allocator allocator;
-} json_decoder;
-
-json_value *json_decode (json_decoder *decoder, const char *buf, jusize size,
+json_value *json_decode (const json_decoder_opts *decoder_opts,
+                         const char *buf, size_t size,
                          json_decode_error *decode_error);
 
 /**
@@ -129,19 +28,19 @@ json_value *json_object_get (json_object *object, const char *key);
 /**
  * Removes a key-entry pair from a json_object using a custom allocator.
  *
- * @param [in] allocator - the custom allocator to use
- * @param [in] object    - the object to search
- * @param [in] key       - the key to remove
- * @param [out] removed_entry - the fields of the removed entry are copied to
- this pointer if not NULL, otherwise the old entry is freed using the custom
- allocator
+ * @param [in]  allocator     - the custom allocator to use
+ * @param [in]  object        - the object to search
+ * @param [in]  key           - the key to remove
+ * @param [out] removed_value - the removed value if pointer is not NULL;
+ ownership is transferred to caller
  *
  * @return - JSON_TRUE if successfully removed or JSON_FALSE if the
  key-value pair did not exist
  */
 
-jbool json_object_remove_ext (json_allocator *allocator, json_object *object,
-                              const char *key, json_entry *removed_entry);
+json_bool json_object_remove_ext (json_allocator *allocator,
+                                  json_object *object, const char *key,
+                                  json_value **removed_value);
 
 /**
  * Removes a key-entry pair from a json_object.
@@ -153,10 +52,10 @@ jbool json_object_remove_ext (json_allocator *allocator, json_object *object,
  key-value pair did not exist
  */
 
-jbool json_object_remove (json_object *object, const char *key);
+json_bool json_object_remove (json_object *object, const char *key);
 
 /**
- * Puts or replaces a new key-value pair into the specified object.
+ * Puts or replaces a key-value pair in the specified json_object.
  *
  * @param [in]  allocator - the allocator used to allocate the objects' entries
  * @param [in]  object    - the object to put the key-value pair into
@@ -164,15 +63,15 @@ jbool json_object_remove (json_object *object, const char *key);
  * @param [in]  value     - the value of the key-value pair
  * @param [in]  copy_key  - if JSON_TRUE copies the key, otherwise assumes
  * ownership of passed key
- * @param [out] entry     - if NULL automatically deletes previous value, if it
- * exists, otherwise receives the key and value
+ * @param [out] old_value - stores the old value associated with the key, if it
+ * exists, and if the pointer is not NULL; otherwise the old value is deleted
  *
- * @return - JSON_ERROR_NONE on success, any other value indicates an error
+ * @return - JSON_ERROR_NONE on success or another value on error
  */
 
 json_error json_object_put_ext (json_allocator *allocator, json_object *object,
-                                char *key, json_value *value, jbool copy_key,
-                                json_entry *entry);
+                                char *key, json_value *value,
+                                json_bool copy_key, json_value **old_value);
 
 /**
  * Puts or replaces a new key-value pair into the specified object.
@@ -186,7 +85,7 @@ json_error json_object_put_ext (json_allocator *allocator, json_object *object,
  * @param [in]  key    - the key of the key-value pair
  * @param [in]  value  - the value of the key-value pair
  *
- * @return - JSON_ERROR_NONE on success, any other value indicates an error
+ * @return - JSON_ERROR_NONE on success or another value on error
  */
 
 json_error json_object_put (json_object *object, const char *key,
@@ -219,9 +118,9 @@ json_value *json_array_get (json_array *array, jusize index);
  * bounds
  */
 
-jbool json_array_replace_ext (json_allocator *allocator, json_array *array,
-                              jusize index, json_value *new_element,
-                              json_value *old_element);
+json_bool json_array_replace_ext (json_allocator *allocator, json_array *array,
+                                  jusize index, json_value *new_element,
+                                  json_value *old_element);
 
 /**
  * Replaces an element in an array with a new element.
@@ -240,8 +139,99 @@ jbool json_array_replace_ext (json_allocator *allocator, json_array *array,
  * was out of bounds
  */
 
-jbool json_array_replace (json_array *array, jusize index,
-                          json_value *new_element, json_value *old_element);
+json_bool json_array_replace (json_array *array, jusize index,
+                              json_value *new_element,
+                              json_value *old_element);
+
+/**
+ * Allocates enough capacity in json_array to fit size elements with a custom
+ * allocator.
+ *
+ * NOTE: Will also succeed if the json_array already has the requisite
+ * capacity.
+ *
+ * @param [in] allocator - the custom allocator to use
+ * @param [in] array     - the array to reserve space in
+ * @param [in] size      - the minimum number of elements the array must be
+ * able to hold
+ *
+ * @return - JSON_ERROR_NONE on success or another value on error
+ */
+
+json_error json_array_reserve_ext (json_allocator *allocator,
+                                   json_array *array, jusize size);
+
+/**
+ * Allocates enough capacity in json_array to fit size elements.
+ *
+ * NOTE: Will also succeed if the json_array already has the requisite
+ * capacity.
+ *
+ * @param [in] array     - the array to reserve space in
+ * @param [in] size      - the minimum number of elements the array must be
+ * able to hold
+ *
+ * @return - JSON_ERROR_NONE on success or another value on error
+ */
+
+json_error json_array_reserve (json_array *array, jusize size);
+
+/**
+ * Truncates an array to size elements using a custom allocator.
+ *
+ * NOTE: Does nothing if size is less than or equal to the length of the
+ * json_array.
+ *
+ * @param [in] allocator - the custom allocator to use
+ * @param [in] array     - the array to truncate
+ * @param [in] size      - the size to truncate to
+ *
+ * @return - JSON_ERROR_NONE on success or another value on error
+ */
+
+json_error json_array_truncate_ext (json_allocator *allocator,
+                                    json_array *array, jusize size);
+
+/**
+ * Truncates an array to size elements.
+ *
+ * NOTE: Does nothing if size is less than or equal to the length of the
+ * json_array.
+ *
+ * @param [in] array     - the array to truncate
+ * @param [in] size      - the size to truncate to
+ *
+ * @return - JSON_ERROR_NONE on success or another value on error
+ */
+
+json_error json_array_truncate (json_array *array, jusize size);
+
+/**
+ * Shrinks a json_array's capacity to the minimum needed to contain its
+ * elements using a custom allocator.
+ *
+ * @param [in] allocator - the custom allocator to use
+ * @param [in] array     - the array to shrink
+ *
+ * @return - JSON_ERROR_NONE on success or another value on error
+ */
+
+json_error json_array_shrink_to_fit_ext (json_allocator *allocator,
+                                         json_array *array);
+
+/**
+ * Shrinks a json_array's capacity to the minimum needed to contain its
+ * elements.
+ *
+ * WARNING: If the decoder used a custom allocator, use
+ * json_array_shrink_to_fit_ext with the correct allocator.
+ *
+ * @param [in] array - the array to shrink
+ *
+ * @return - JSON_ERROR_NONE on success or another value on error
+ */
+
+json_error json_array_shrink_to_fit (json_array *array);
 
 /**
  * Appends an element to a json_array with a custom allocator.
@@ -250,7 +240,7 @@ jbool json_array_replace (json_array *array, jusize index,
  * @param array     - the array to append to
  * @param value     - the value to append
  *
- * @return - JSON_ERROR_NONE on success, any other value indicates an error
+ * @return - JSON_ERROR_NONE on success or another value on error
  */
 
 json_error json_array_append_ext (json_allocator *allocator, json_array *array,
@@ -265,20 +255,252 @@ json_error json_array_append_ext (json_allocator *allocator, json_array *array,
  * @param array     - the array to append to
  * @param value     - the value to append
  *
- * @return - JSON_ERROR_NONE on success, any other value indicates an error
+ * @return - JSON_ERROR_NONE on success or another value on error
  */
 
 json_error json_array_append (json_array *array, json_value *value);
+
+json_error json_buf_encode_char32 (char *buf, jusize size, jchar32 cp,
+                                   ju8 *out_len);
+
+json_error json_buf_decode_char32 (const char *buf, jusize size,
+                                   jchar32 *out_cp, ju8 *out_len);
+
+void json_string_create (json_string **out_str);
+
+json_error json_string_from_c_str_ext (json_allocator *allocator,
+                                       const char *str, json_string **out_str);
+
+json_error json_string_from_c_str (const char *str, json_string **out_str);
+
+jusize json_string_length (json_string *str);
+
+char *json_string_c_str (json_string *str);
+
+json_error json_string_clone_ext (json_allocator *allocator, json_string *str,
+                                  json_string **out_str);
+
+json_error json_string_clone (json_string *str, json_string **out_str);
+
+json_error json_string_append_ext (json_allocator *allocator, json_string *str,
+                                   jchar32 cp);
+
+json_error json_string_append (json_string *str, jchar32 cp);
+
+json_error json_string_append_from_buf_ext (json_allocator *allocator,
+                                            json_string *str, const char *buf,
+                                            jusize size);
+
+json_error json_string_append_from_buf (json_string *str, const char *buf,
+                                        jusize size);
+
+void json_string_clear_ext (json_allocator *allocator, json_string *string,
+                            json_bool deallocate);
+
+void json_string_clear (json_string *string, json_bool deallocate);
+
+void json_string_free_ext (json_allocator *allocator, json_string *str);
+
+void json_string_free (json_string *str);
+
+/**
+ * Retrieves the value type of a specified json_value.
+ *
+ * @param [in] value - the value to retrieve the type of
+ *
+ * @return - the type of the value
+ */
+
+json_value_type json_value_get_type (json_value *value);
+
+/**
+ * Retrieves the json_object of a specified json_value.
+ *
+ * @param [in]  value - the value to retrieve the json_object from
+ * @param [out] o     - the pointer to store the json_object into
+ *
+ * @return - JSON_TRUE if the value is an object or JSON_FALSE otherwise
+ */
+
+json_bool json_value_get_object (json_value *value, json_object **o);
+
+/**
+ * Retrieves the json_object of a specified json_value.
+ *
+ * @param [in]  value - the value to retrieve the json_array from
+ * @param [out] a     - the pointer to store the json_array into
+ *
+ * @return - JSON_TRUE if the value is an array or JSON_FALSE otherwise
+ */
+
+json_bool json_value_get_array (json_value *value, json_array **a);
+
+/**
+ * Retrieves the number of a specified json_value.
+ *
+ * @param [in]  value - the value to retrieve the number from
+ * @param [out] n     - the pointer to store the number into
+ *
+ * @return - JSON_TRUE if the value is a number or JSON_FALSE otherwise
+ */
+
+json_bool json_value_get_number (json_value *value, json_number *n);
+
+/**
+ * Converts json_value to bool type using custom allocator.
+ *
+ * WARNING: Invalidates any data previously in the value.
+ *
+ * @param [in] allocator - the custom allocator to use for freeing
+ * @param [in] value     - the value to convert
+ * @param [in] n         - the number value to convert to
+ */
+
+void json_value_set_number_ext (json_allocator *allocator, json_value *value,
+                                json_number n);
+
+/**
+ * Converts json_value to bool type.
+ *
+ * WARNING: Invalidates any data previously in the value.
+ * WARNING: If the decoder used a custom allocator, use
+ * json_value_set_number_ext with the correct allocator.
+ *
+ * @param [in] value - the value to convert
+ * @param [in] n     - the number value to convert to
+ */
+
+void json_value_set_number (json_value *value, json_number n);
+
+/**
+ * Retrieves the json_string of a specified json_value.
+ *
+ * @param [in]  value - the value to retrieve the json_string from
+ * @param [out] a     - the pointer to store the json_string into
+ *
+ * @return - JSON_TRUE if the value is a string or JSON_FALSE otherwise
+ */
+
+json_bool json_value_get_string (json_value *value, json_string **s);
+
+/**
+ * Converts json_value to bool type using custom allocator.
+ *
+ * WARNING: Invalidates any data previously in the value.
+ *
+ * @param [in] allocator - the custom allocator to use for freeing
+ * @param [in] value     - the value to convert
+ * @param [in] str       - the string value to convert to; transfers ownership
+ * of str to value
+ */
+
+void json_value_set_string_ext (json_allocator *allocator, json_value *value,
+                                json_string *str);
+
+/**
+ * Converts json_value to string type.
+ *
+ * WARNING: Invalidates any data previously in the value.
+ * WARNING: If the decoder used a custom allocator, use
+ * json_value_set_string_ext with the correct allocator.
+ *
+ * @param [in] value - the value to convert
+ * @param [in] str   - the string value to convert to; transfers ownership
+ * of str to value
+ */
+
+void json_value_set_string (json_value *value, json_string *str);
+
+/**
+ * Retrieves the bool of a specified json_value.
+ *
+ * @param [in]  value - the value to retrieve the bool from
+ * @param [out] b     - the pointer to store the bool into
+ *
+ * @return - JSON_TRUE if the value is a bool or JSON_FALSE otherwise
+ */
+
+json_bool json_value_get_bool (json_value *value, json_bool *b);
+
+/**
+ * Converts json_value to bool type using custom allocator.
+ *
+ * WARNING: Invalidates any data previously in the value.
+ *
+ * @param [in] allocator - the custom allocator to use for freeing
+ * @param [in] value     - the value to convert
+ * @param [in] v         - the bool value to convert to
+ */
+
+void json_value_set_bool_ext (json_allocator *allocator, json_value *value,
+                              json_bool v);
+
+/**
+ * Converts json_value to bool type.
+ *
+ * WARNING: Invalidates any data previously in the value.
+ * WARNING: If the decoder used a custom allocator, use json_value_set_bool_ext
+ * with the correct allocator.
+ *
+ * @param [in] value - the value to convert
+ * @param [in] v     - the bool value to convert to
+ */
+
+void json_value_set_bool (json_value *value, json_bool v);
+
+/**
+ * Determines if a specified json_value is null.
+ *
+ * @param - the value to determine
+ *
+ * @return - JSON_TRUE if the value is null or JSON_FALSE otherwise
+ */
+
+json_bool json_value_is_null (json_value *value);
+
+/**
+ * Converts json_value to bool type using custom allocator.
+ *
+ * WARNING: Invalidates any data previously in the value.
+ *
+ * @param [in] allocator - the custom allocator to use for freeing
+ * @param [in] value     - the value to convert
+ */
+
+void json_value_set_null_ext (json_allocator *allocator, json_value *value);
+
+/**
+ * Converts json_value to null type.
+ *
+ * WARNING: Invalidates any data previously in the value.
+ * WARNING: If the decoder used a custom allocator, use
+ * json_value_set_to_null_ext with the correct allocator.
+ *
+ * @param [in] value - the value to convert
+ */
+
+void json_value_set_null (json_value *value);
+
+/**
+ * Prints the value and its children, if any, to stdout.
+ *
+ * @param [in] value - the value to print
+ */
+
+void json_value_print (json_value *value);
 
 /**
  * Frees a json_value and all of its children, if any, using a custom
  * allocator.
  *
- * @param [in] value     - the value to free
- * @param [in] allocator - the allocator used to allocate the value
+ * @param [in] allocator  - the allocator used to allocate the value
+ * @param [in] value      - the value to free
+ * @param [in] free_value - frees value if JSON_TRUE; should be true if value
+ * is on stack or belongs to a json_object or json_array
  */
 
-void json_value_free_ext (json_allocator *allocator, json_value *value);
+void json_value_free_ext (json_allocator *allocator, json_value *value,
+                          json_bool free_value);
 
 /**
  * Frees a json_value and all of its children, if any.
@@ -287,8 +509,18 @@ void json_value_free_ext (json_allocator *allocator, json_value *value);
  * with the correct allocator.
  *
  * @param [in] value - the value to free
+ * @param [in] free_value - frees value if JSON_TRUE; should be true if value
+ * is on stack or belongs to a json_object or json_array
  */
 
-void json_value_free (json_value *value);
+void json_value_free (json_value *value, json_bool free_value);
+
+/**
+ * Retrieves a human readable error message for a respective error code.
+ *
+ * @param [in] error - the error code
+ */
+
+const char *json_error_to_str (json_error error);
 
 #endif

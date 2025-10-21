@@ -20,4 +20,30 @@
  * IN THE SOFTWARE.
  */
 
-#include "json.h"
+#include "_internal.h"
+#include "json_types.h"
+#include <stdio.h>
+
+json_bool
+json_value_get_number (json_value *value, json_number *n)
+{
+  if (value->type != JSON_VALUE_TYPE_NUMBER)
+    return JSON_FALSE;
+
+  *n = value->value.number;
+  return JSON_TRUE;
+}
+
+void
+json_value_print (json_value *value)
+{
+  switch (value->type)
+    {
+    case JSON_VALUE_TYPE_NUMBER:
+      printf ("%f", value->value.number);
+      break;
+    default:
+      printf ("<error type>");
+      break;
+    }
+}
