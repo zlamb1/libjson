@@ -60,6 +60,7 @@ y_tests = [
     [ 'num_int_exp',    '100000.000000' ],
     [ 'num_exp_hyphen', '0.110000'      ],
     [ 'num_exp_plus',   '131.230000'    ],
+    [ 'ws',             '50.000000'     ],
 ]
 
 y_ext_tests = [
