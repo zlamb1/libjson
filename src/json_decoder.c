@@ -84,8 +84,8 @@ consume_whitespace (json_decoder *decoder, buffer *buf)
     }
 }
 
-static json_error
-decode_value (buffer *buf, json_value *value)
+json_error
+json_decode_value (json_decoder *decoder, json_value *value, buffer *buf)
 {
   if (!buf->size)
     return JSON_ERROR_EOF;
@@ -93,7 +93,7 @@ decode_value (buffer *buf, json_value *value)
   char ch = buf->data[0];
 
   if (ch == 0x2D || is_digit (ch))
-    return json_decode_number (buf, value, ch);
+    return json_decode_number (decoder, value, buf, ch);
 
   return JSON_ERROR_INTERNAL;
 }
@@ -106,6 +106,7 @@ json_decode (const json_decoder_opts *decoder_opts, const char *_buf,
     decoder_opts = &std_opts;
 
   json_decoder decoder = { .allocator = decoder_opts->allocator,
+                           .ext_flags = decoder_opts->ext_flags,
                            .tab_size  = decoder_opts->tab_size };
 
   if (decoder.allocator == NULL)
@@ -124,7 +125,7 @@ json_decode (const json_decoder_opts *decoder_opts, const char *_buf,
   json_error error;
   json_value value;
 
-  if ((error = decode_value (&buf, &value)) != JSON_ERROR_NONE)
+  if ((error = json_decode_value (&decoder, &value, &buf)) != JSON_ERROR_NONE)
     {
       EMIT_DECODE_ERROR (error, buf.row, buf.col);
       return NULL;

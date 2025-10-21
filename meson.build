@@ -48,6 +48,10 @@ n_tests = [
     'bad_exp_plus',
 ]
 
+n_ext_tests = [
+    'trailing_decimal',
+]
+
 y_tests = [
     [ 'num_int',        '1.000000'      ],
     [ 'num_frac',       '1.435610'      ],
@@ -57,8 +61,16 @@ y_tests = [
     [ 'num_exp_plus',   '131.230000'    ],
 ]
 
+y_ext_tests = [
+    ['trailing_decimal', '1.000000'],
+]
+
 foreach test : n_tests
     test(f'n_@test@', tester, args : [f'@test_dir@/n/@test@.json'], should_fail : true)
+endforeach
+
+foreach test : n_ext_tests
+    test(f'n_ext_@test@', tester, args : [f'@test_dir@/n/ext_@test@.json', '-e'], should_fail : true)
 endforeach
 
 foreach test : y_tests
@@ -68,6 +80,19 @@ foreach test : y_tests
     if test.length() > 1
         args += test[1]
     endif
+
+    test(f'y_@test_name@', tester, args : args)
+endforeach
+
+foreach test : y_ext_tests
+    test_name = test[0]
+    args = [f'@test_dir@/y/ext_@test_name@.json']
+
+    if test.length() > 1
+        args += test[1]
+    endif
+
+    args += '-e'
 
     test(f'y_@test_name@', tester, args : args)
 endforeach

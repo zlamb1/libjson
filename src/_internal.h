@@ -54,7 +54,7 @@ typedef struct json_value
 typedef struct json_decoder
 {
   json_allocator *allocator;
-  ju32 tab_size;
+  ju32 ext_flags, tab_size;
 } json_decoder;
 
 typedef struct buffer
@@ -69,6 +69,9 @@ is_digit (char ch)
   return ch >= 0x30 && ch <= 0x39;
 }
 
-json_error json_decode_number (buffer *buf, json_value *value, char ch);
+json_error json_decode_number (json_decoder *decoder, json_value *value,
+                               buffer *buf, char ch);
+json_error json_decode_value (json_decoder *decoder, json_value *value,
+                              buffer *buf);
 
 #endif

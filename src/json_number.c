@@ -23,9 +23,11 @@
 #include <math.h>
 
 #include "_internal.h"
+#include "json_types.h"
 
 json_error
-json_decode_number (buffer *buf, json_value *value, char ch)
+json_decode_number (json_decoder *decoder, json_value *value, buffer *buf,
+                    char ch)
 {
   ju8 is_neg = 0, num_has_frac = 0, num_has_exp = 0, is_exp_neg = 0;
   ju64 num_int = 0, num_frac = 0;
@@ -73,12 +75,22 @@ read_int:
   BUF_ADVANCE_COL (buf);
 
   if (!buf->size)
-    return JSON_ERROR_BAD_FRAC;
+    {
+      if (decoder->ext_flags & JSON_EXT_TRAILING_DECIMAL)
+        goto end_number;
+
+      return JSON_ERROR_BAD_FRAC;
+    }
 
   ch = buf->data[0];
 
   if (!is_digit (ch))
-    return JSON_ERROR_BAD_FRAC;
+    {
+      if (decoder->ext_flags & JSON_EXT_TRAILING_DECIMAL)
+        goto end_number;
+
+      return JSON_ERROR_BAD_FRAC;
+    }
 
   num_has_frac = 1;
 

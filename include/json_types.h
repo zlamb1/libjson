@@ -100,9 +100,9 @@
 
 #define STD_DECODER_OPTS                                                      \
   {                                                                           \
-    .extension_flags = JSON_EXT_IGNORE_BOM,                                   \
-    .max_depth       = JSON_ANY_DEPTH,                                        \
-    .tab_size        = 4,                                                     \
+    .ext_flags = JSON_EXT_IGNORE_BOM,                                         \
+    .max_depth = JSON_ANY_DEPTH,                                              \
+    .tab_size  = 4,                                                           \
   }
 
 typedef uint8_t ju8;
@@ -166,7 +166,7 @@ typedef struct json_decode_error
 
 typedef struct json_decoder_opts
 {
-  ju32 extension_flags;
+  ju32 ext_flags;
   ju32 max_depth;
   ju32 tab_size;
   json_allocator *allocator;

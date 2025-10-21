@@ -1,3 +1,4 @@
+#include "json_types.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +9,8 @@
 #define READALL_NOMEM -1
 #define READALL_NFILE -2
 #define READALL_ERROR -3
+
+static json_decoder_opts *decoder_opts = NULL;
 
 static int
 readall (const char *filename, char **buf, size_t *size)
@@ -112,7 +115,7 @@ run_test (const char *filename, const char *expected)
     }
 
   json_decode_error decode_error;
-  json_value *value = json_decode (NULL, buf, size, &decode_error);
+  json_value *value = json_decode (decoder_opts, buf, size, &decode_error);
 
   if (value == NULL)
     {
@@ -148,12 +151,33 @@ run_test (const char *filename, const char *expected)
 int
 main (int argc, char *argv[])
 {
+  static json_decoder_opts ext_opts = STD_DECODER_OPTS;
+  // we allow all extensions for ext tests
+  ext_opts.ext_flags = JSON_EXT_ALL;
+
   if (argc < 2)
     {
       fprintf (stderr, "no input files provided\n");
       return -1;
     }
 
+  for (int i = 1; i < argc; i++)
+    {
+      char *arg = argv[i];
+      if (arg[0] == '-')
+        {
+          while ((++arg)[0])
+            {
+              if (arg[0] == 'e')
+                {
+                  decoder_opts = &ext_opts;
+                  goto run_tests;
+                }
+            }
+        }
+    }
+
+run_tests:
   for (int i = 1; i < argc;)
     {
       char *filename = argv[i];
