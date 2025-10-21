@@ -3,6 +3,23 @@
 
 #include "json_types.h"
 
+/**
+ * libjson
+ *
+ * A library purpose-built for decoding and encoding JSON files to and from an
+ * in-memory representation.
+ *
+ * Features:
+ * - decoding
+ * - encoding
+ * - printing
+ * - extensions
+ *
+ * Note: The documentation for each function lists possible errors, but that
+ * list is not always exhaustive. Do not assume an error cannot be returned
+ * from any of the library functions even if it is not listed.
+ */
+
 typedef struct json_object json_object;
 typedef struct json_array json_array;
 typedef struct json_string json_string;
@@ -236,9 +253,9 @@ json_error json_array_shrink_to_fit (json_array *array);
 /**
  * Appends an element to a json_array with a custom allocator.
  *
- * @param allocator - the custom allocator to use
- * @param array     - the array to append to
- * @param value     - the value to append
+ * @param [in] allocator - the custom allocator to use
+ * @param [in] array     - the array to append to
+ * @param [in] value     - the value to append
  *
  * @return - JSON_ERROR_NONE on success or another value on error
  */
@@ -252,21 +269,86 @@ json_error json_array_append_ext (json_allocator *allocator, json_array *array,
  * WARNING: If the decoder used a custom allocator, use json_array_append_ext
  * with the correct allocator.
  *
- * @param array     - the array to append to
- * @param value     - the value to append
+ * @param [in] array - the array to append to
+ * @param [in] value - the value to append
  *
  * @return - JSON_ERROR_NONE on success or another value on error
  */
 
 json_error json_array_append (json_array *array, json_value *value);
 
-json_error json_buf_encode_char32 (char *buf, jusize size, jchar32 cp,
-                                   ju8 *out_len);
+/**
+ * Disposes the memory used by an array, using a custom allocator, without
+ * invalidating the handle to the array.
+ *
+ * @param [in] allocator      - the custom allocator to use
+ * @param [in] array          - the array to clear
+ */
+
+void json_array_dispose_ext (json_allocator *allocator, json_array *array);
+
+/**
+ * Disposes the memory used by an array without invalidating the handle to the
+ * array.
+ *
+ * @param [in] array          - the array to clear
+ */
+
+void json_array_dispose (json_array *array);
+
+/**
+ * Invalidates the content of a json_array and the handle to it using a custom
+ * allocator.
+ *
+ * @param [in] allocator - the custom allocator to use
+ * @param [in] array     - the array to destroy
+ */
+
+void json_array_destroy_ext (json_allocator *allocator, json_array *array);
+
+/**
+ * Invalidates the content of a json_array and the handle to it.
+ *
+ * @param [in] array     - the array to destroy
+ */
+
+void json_array_destroy (json_array *array);
+
+/**
+ * Decode a UTF-32 character into an out variable.
+ *
+ * @param [in]  buf     - the buf to encode into
+ * @param [in]  size    - the size of the buf
+ * @param [out] out_cp  - the decoded UTF-32 code point
+ * @param [out] out_len - the length of the encoded UTF-8 character
+ *
+ * @returns - JSON_ERROR_NONE:
+ * @returns - JSON_ERROR_DECODING: invalid UTF-8 character
+ * @returns - JSON_ERROR_BUF_LEN:  buffer not large enough for decoding
+ */
 
 json_error json_buf_decode_char32 (const char *buf, jusize size,
                                    jchar32 *out_cp, ju8 *out_len);
 
-void json_string_create (json_string **out_str);
+/**
+ * Encode a UTF-32 character into UTF-8 into a specified buffer.
+ *
+ * @param [in]  buf     - the buf to encode into
+ * @param [in]  size    - the size of the buf
+ * @param [in]  cp      - the UTF-32 character to encode
+ * @param [out] out_len - the length of the encoded UTF-8 character
+ *
+ * @returns - JSON_ERROR_NONE:
+ * @returns - JSON_ERROR_ENCODING: invalid UTF-8 character
+ * @returns - JSON_ERROR_BUF_LEN:  buffer not large enough for encoding
+ */
+
+json_error json_buf_encode_char32 (char *buf, jusize size, jchar32 cp,
+                                   ju8 *out_len);
+
+json_string **json_string_create_ext (json_allocator *allocator);
+
+json_string **json_string_create (void);
 
 json_error json_string_from_c_str_ext (json_allocator *allocator,
                                        const char *str, json_string **out_str);
@@ -481,6 +563,11 @@ void json_value_set_null_ext (json_allocator *allocator, json_value *value);
 
 void json_value_set_null (json_value *value);
 
+json_error json_value_snprint (char *strp, jusize max_len, json_value *value,
+                               jusize *real_len);
+
+json_error json_value_asprint (char **strp, json_value *value);
+
 /**
  * Prints the value and its children, if any, to stdout.
  *
@@ -490,30 +577,44 @@ void json_value_set_null (json_value *value);
 void json_value_print (json_value *value);
 
 /**
- * Frees a json_value and all of its children, if any, using a custom
- * allocator.
+ * Destroys a value's children, if any, using a custom allocator. Does not
+ * destroy the value handle.
+ *
+ * @param [in] allocator - the custom allocator to use
+ * @param [in] value     - the value to release
+ */
+
+void json_value_dispose_ext (json_allocator *allocator, json_value *value);
+
+/**
+ * Destroys a value's children, if any. Does not
+ * destroy the value handle.
+ *
+ * @param [in] value - the value to release
+ */
+
+void json_value_dispose (json_value *value);
+
+/**
+ * Destroy the value handle and releases all of its children, if any, using a
+ * custom allocator.
  *
  * @param [in] allocator  - the allocator used to allocate the value
  * @param [in] value      - the value to free
- * @param [in] free_value - frees value if JSON_TRUE; should be true if value
- * is on stack or belongs to a json_object or json_array
  */
 
-void json_value_free_ext (json_allocator *allocator, json_value *value,
-                          json_bool free_value);
+void json_value_destroy_ext (json_allocator *allocator, json_value *value);
 
 /**
- * Frees a json_value and all of its children, if any.
+ * Destroy a value and all of its children, if any.
  *
- * WARNING: If the decoder used a custom allocator, use json_value_free_ext
+ * WARNING: If the decoder used a custom allocator, use json_value_destroy_ext
  * with the correct allocator.
  *
  * @param [in] value - the value to free
- * @param [in] free_value - frees value if JSON_TRUE; should be true if value
- * is on stack or belongs to a json_object or json_array
  */
 
-void json_value_free (json_value *value, json_bool free_value);
+void json_value_destroy (json_value *value);
 
 /**
  * Retrieves a human readable error message for a respective error code.

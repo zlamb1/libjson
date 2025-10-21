@@ -1,7 +1,7 @@
 #ifndef _INTERNAL_H
 #define _INTERNAL_H 1
 
-#include "json_types.h"
+#include "json.h"
 
 #define BUF_ADVANCE_COL(BUF)                                                  \
   do                                                                          \
@@ -19,25 +19,25 @@ typedef struct json_entry
   struct json_value *next;
 } json_entry;
 
-typedef struct json_object
+struct json_object
 {
   jusize size, cap;
   json_entry *entries;
-} json_object;
+};
 
-typedef struct json_array
+struct json_array
 {
   jusize size, cap;
   struct json_value *elements;
-} json_array;
+};
 
-typedef struct json_string
+struct json_string
 {
   jusize len, cap;
   char *str;
-} json_string;
+};
 
-typedef struct json_value
+struct json_value
 {
   ju8 type;
 
@@ -49,7 +49,7 @@ typedef struct json_value
     json_number number;
     json_bool bool;
   } value;
-} json_value;
+};
 
 typedef struct json_decoder
 {
@@ -69,6 +69,10 @@ is_digit (char ch)
   return ch >= 0x30 && ch <= 0x39;
 }
 
+void json_consume_whitespace (json_decoder *decoder, buffer *buf);
+
+json_error json_decode_array (json_decoder *decoder, json_value *value,
+                              buffer *buf);
 json_error json_decode_number (json_decoder *decoder, json_value *value,
                                buffer *buf, char ch);
 json_error json_decode_value (json_decoder *decoder, json_value *value,

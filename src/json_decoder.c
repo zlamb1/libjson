@@ -24,7 +24,6 @@
 
 #include "_internal.h"
 #include "json_alloc.h"
-#include "json_types.h"
 
 #define EMIT_DECODE_ERROR(ERR, ROW, COL)                                      \
   do                                                                          \
@@ -46,8 +45,8 @@ json_allocator std_allocator = {
   .json_free    = json_free_s,
 };
 
-static inline void
-consume_whitespace (json_decoder *decoder, buffer *buf)
+void
+json_consume_whitespace (json_decoder *decoder, buffer *buf)
 {
   while (buf->size)
     {
@@ -95,6 +94,9 @@ json_decode_value (json_decoder *decoder, json_value *value, buffer *buf)
   if (ch == 0x2D || is_digit (ch))
     return json_decode_number (decoder, value, buf, ch);
 
+  if (ch == 0x5B)
+    return json_decode_array (decoder, value, buf);
+
   return JSON_ERROR_INTERNAL;
 }
 
@@ -120,7 +122,7 @@ json_decode (const json_decoder_opts *decoder_opts, const char *_buf,
       return NULL;
     }
 
-  consume_whitespace (&decoder, &buf);
+  json_consume_whitespace (&decoder, &buf);
 
   json_error error;
   json_value value;
@@ -131,7 +133,7 @@ json_decode (const json_decoder_opts *decoder_opts, const char *_buf,
       return NULL;
     }
 
-  consume_whitespace (&decoder, &buf);
+  json_consume_whitespace (&decoder, &buf);
 
   if (buf.size != 0 && (buf.size != 1 || buf.data[0] != 0))
     {

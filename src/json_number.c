@@ -23,10 +23,9 @@
 #include <math.h>
 
 #include "_internal.h"
-#include "json_types.h"
 
 static inline json_error
-json_decode_octal (json_value *value, buffer *buf, char ch)
+json_decode_octal (json_value *value, buffer *buf, char ch, json_bool is_neg)
 {
   ju64 number = 0;
   ju8 digit;
@@ -50,7 +49,7 @@ read_octal:
 
 end_number:
   value->type         = JSON_VALUE_TYPE_NUMBER;
-  value->value.number = (double) number;
+  value->value.number = is_neg ? -((double) number) : ((double) number);
 
   return JSON_ERROR_NONE;
 }
@@ -71,7 +70,7 @@ get_hex_digit (char ch)
 }
 
 static inline json_error
-json_decode_hex (json_value *value, buffer *buf, char ch)
+json_decode_hex (json_value *value, buffer *buf, char ch, json_bool is_neg)
 {
   ju64 number = 0;
   ju8 digit;
@@ -107,7 +106,7 @@ read_hex:
 
 end_number:
   value->type         = JSON_VALUE_TYPE_NUMBER;
-  value->value.number = (double) number;
+  value->value.number = is_neg ? -((double) number) : ((double) number);
 
   return JSON_ERROR_NONE;
 }
@@ -143,7 +142,7 @@ read_int:
   if (num_int_digits == 2 && !num_int)
     {
       if (decoder->ext_flags & JSON_EXT_OCTAL_LITERALS)
-        return json_decode_octal (value, buf, ch);
+        return json_decode_octal (value, buf, ch, is_neg);
 
       return JSON_ERROR_LEADING_ZERO;
     }
@@ -165,7 +164,7 @@ read_int:
     {
       if (num_int_digits == 1 && num_int == 0 && (ch == 0x58 || ch == 0x78)
           && (decoder->ext_flags & JSON_EXT_HEX_LITERALS))
-        return json_decode_hex (value, buf, ch);
+        return json_decode_hex (value, buf, ch, is_neg);
 
       goto check_exp;
     }

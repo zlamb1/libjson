@@ -50,16 +50,19 @@ n_tests = [
     'ws',
     'octal',
     'hex',
+    'unclosed_array',
 ]
 
 y_tests = [
-    [ 'num_int',        '1.000000'      ],
-    [ 'num_frac',       '1.435610'      ],
-    [ 'num_exp',        '14.356100'     ],
-    [ 'num_int_exp',    '100000.000000' ],
-    [ 'num_exp_hyphen', '0.110000'      ],
-    [ 'num_exp_plus',   '131.230000'    ],
-    [ 'ws',             '50.000000'     ],
+    [ 'num_int',        '1.000000'                       ],
+    [ 'num_frac',       '1.435610'                       ],
+    [ 'num_exp',        '14.356100'                      ],
+    [ 'num_int_exp',    '100000.000000'                  ],
+    [ 'num_exp_hyphen', '0.110000'                       ],
+    [ 'num_exp_plus',   '131.230000'                     ],
+    [ 'ws',             '50.000000'                      ],
+    [ 'empty_array',    '[]'                             ],
+    [ 'int_array',      '[1.000000, 2.000000, 3.000000]' ],
 ]
 
 y_ext_tests = [

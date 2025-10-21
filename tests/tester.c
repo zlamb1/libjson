@@ -126,11 +126,10 @@ run_test (const char *filename, const char *expected)
 
   if (expected)
     {
-      char tmpbuf[64];
-      json_number number;
+      char tmpbuf[512];
 
-      json_value_get_number (value, &number);
-      sprintf (tmpbuf, "%f", number);
+      json_value_snprint (tmpbuf, 512, value, NULL);
+
       if (strcmp (tmpbuf, expected) != 0)
         {
           fprintf (stderr, "expected '%s' -> got '%s'\n", expected, tmpbuf);
