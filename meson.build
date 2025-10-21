@@ -48,6 +48,8 @@ n_tests = [
     'bad_exp_plus',
     'trailing_decimal',
     'ws',
+    'octal',
+    'hex',
 ]
 
 y_tests = [
@@ -61,7 +63,10 @@ y_tests = [
 ]
 
 y_ext_tests = [
-    ['trailing_decimal', '1.000000'],
+    [ 'trailing_decimal', '1.000000'     ],
+    [ 'octal',            '9.000000'     ],
+    [ 'hex',              '2842.000000'  ],
+    [ 'hex_mixed',        '37292.000000' ],
 ]
 
 foreach test : n_tests

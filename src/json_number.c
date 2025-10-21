@@ -25,6 +25,93 @@
 #include "_internal.h"
 #include "json_types.h"
 
+static inline json_error
+json_decode_octal (json_value *value, buffer *buf, char ch)
+{
+  ju64 number = 0;
+  ju8 digit;
+
+read_octal:
+  digit = ch - 0x30;
+
+  if (digit > 7)
+    return JSON_ERROR_BAD_OCTAL;
+
+  number *= 8;
+  number += ch - 0x30;
+
+  BUF_ADVANCE_COL (buf);
+
+  if (!buf->size)
+    goto end_number;
+
+  if (is_digit (ch))
+    goto read_octal;
+
+end_number:
+  value->type         = JSON_VALUE_TYPE_NUMBER;
+  value->value.number = (double) number;
+
+  return JSON_ERROR_NONE;
+}
+
+static inline int
+get_hex_digit (char ch)
+{
+  if (ch >= 0x30 && ch <= 0x39)
+    return ch - 0x30;
+
+  if (ch >= 0x41 && ch <= 0x46)
+    return (ch - 0x41) + 10;
+
+  if (ch >= 0x61 && ch <= 0x66)
+    return (ch - 0x61) + 10;
+
+  return -1;
+}
+
+static inline json_error
+json_decode_hex (json_value *value, buffer *buf, char ch)
+{
+  ju64 number = 0;
+  ju8 digit;
+  int tmp;
+
+  BUF_ADVANCE_COL (buf);
+
+  if (!buf->size)
+    return JSON_ERROR_BAD_HEX;
+
+  ch = buf->data[0];
+  if ((tmp = get_hex_digit (ch)) < 0)
+    return JSON_ERROR_BAD_HEX;
+
+  digit = tmp;
+
+read_hex:
+  number *= 16;
+  number += digit;
+
+  BUF_ADVANCE_COL (buf);
+
+  if (!buf->size)
+    goto end_number;
+
+  ch = buf->data[0];
+
+  if ((tmp = get_hex_digit (ch)) >= 0)
+    {
+      digit = tmp;
+      goto read_hex;
+    }
+
+end_number:
+  value->type         = JSON_VALUE_TYPE_NUMBER;
+  value->value.number = (double) number;
+
+  return JSON_ERROR_NONE;
+}
+
 json_error
 json_decode_number (json_decoder *decoder, json_value *value, buffer *buf,
                     char ch)
@@ -54,7 +141,12 @@ read_int:
   ++num_int_digits;
 
   if (num_int_digits == 2 && !num_int)
-    return JSON_ERROR_LEADING_ZERO;
+    {
+      if (decoder->ext_flags & JSON_EXT_OCTAL_LITERALS)
+        return json_decode_octal (value, buf, ch);
+
+      return JSON_ERROR_LEADING_ZERO;
+    }
 
   num_int *= 10;
   num_int += ch - 0x30;
@@ -70,7 +162,13 @@ read_int:
     goto read_int;
 
   if (ch != 0x2E)
-    goto check_exp;
+    {
+      if (num_int_digits == 1 && num_int == 0 && (ch == 0x58 || ch == 0x78)
+          && (decoder->ext_flags & JSON_EXT_HEX_LITERALS))
+        return json_decode_hex (value, buf, ch);
+
+      goto check_exp;
+    }
 
   BUF_ADVANCE_COL (buf);
 
