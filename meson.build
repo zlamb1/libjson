@@ -46,11 +46,8 @@ n_tests = [
     'bad_exp',
     'bad_exp_hyphen',
     'bad_exp_plus',
-    'ws.json',
-]
-
-n_ext_tests = [
     'trailing_decimal',
+    'ws',
 ]
 
 y_tests = [
@@ -69,10 +66,6 @@ y_ext_tests = [
 
 foreach test : n_tests
     test(f'n_@test@', tester, args : [f'@test_dir@/n/@test@.json'], should_fail : true)
-endforeach
-
-foreach test : n_ext_tests
-    test(f'n_ext_@test@', tester, args : [f'@test_dir@/n/ext_@test@.json', '-e'], should_fail : true)
 endforeach
 
 foreach test : y_tests

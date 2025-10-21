@@ -164,16 +164,21 @@ main (int argc, char *argv[])
   for (int i = 1; i < argc; i++)
     {
       char *arg = argv[i];
-      if (arg[0] == '-')
+      if (arg[0] == '\0' || arg[0] == '-')
         {
-          while ((++arg)[0])
-            {
-              if (arg[0] == 'e')
-                {
-                  decoder_opts = &ext_opts;
-                  goto run_tests;
-                }
-            }
+          argv[i] = argv[argc - 1];
+          --argc;
+          --i;
+
+          if (arg[0] == '-')
+            while ((++arg)[0])
+              {
+                if (arg[0] == 'e')
+                  {
+                    decoder_opts = &ext_opts;
+                    goto run_tests;
+                  }
+              }
         }
     }
 
